@@ -1,0 +1,101 @@
+---
+title: "Courseproject 2 Analysis of NOAA Storm Database"
+author: "M"
+date: "21.01.2015"
+output: html_document
+---
+
+TODO: Synopsis
+
+###Data Processing
+The data is loaded with the read.table command, I tried also to use the fread command of the data.table package but unfortunately this threw an error. As the dataset with around 600MB seems ok for standard PC I decided not to investigate any further this problem. The packages I include in my processing are dplyr, stringr and ggmpap.
+ddplyr is really powerful in data management and processing, so firstly I loaded the data in the local dataframe file type of dplyr. In a next step I reduce the data to the relevant variables (in my point of view). These are the date, where an event occured, event type, and its damage it is causing, expressed in the variables fatalities, injuries, property damages and crop damages.
+Furthermore I include the longitude and latitude information to locate the events and show its magnitude.
+
+```{r data process}
+library(dplyr)
+library(stringr)
+library(ggmap)
+setwd("/home/me/Github/Courseproject2_RepR/")
+#data_storm       <- read.table("repdata_data_StormData.csv", sep=",",header=TRUE)
+load("stormdata.RData")
+data_df          <- select(data_storm, BGN_DATE, EVTYPE, FATALITIES, INJURIES,PROPDMG, CROPDMG, LATITUDE,LONGITUDE)
+data_df          <- tbl_df(data_df)
+data_df$BGN_DATE <- as.character(data_df$BGN_DATE)
+
+data_df_MUT      <- mutate(data_df ,
+                                    YEAR = str_extract(BGN_DATE, "\\d{4}"),
+                                    LONGITUDE = - LONGITUDE/100, 
+                                    LATITUDE =LATITUDE/100 )
+data_df_MUT      <- select(data_df_MUT, -BGN_DATE)
+data_df_analysis <- select(data_df_MUT, YEAR, EVTYPE:LONGITUDE)
+
+
+
+
+
+
+
+
+```
+
+
+
+There should be a section titled Data Processing which describes (in words and code) how the data were loaded into R and processed for analysis. In particular, your analysis must start from the raw CSV file containing the data. You cannot do any preprocessing outside the document. If preprocessing is time-consuming you may consider using the cache = TRUE option for certain code chunks.
+
+###Results
+```{r question1, fig.width=10, fig.height=6}
+
+top_param <- 20
+
+data_question1   <- arrange(data_df_analysis, desc(FATALITIES + INJURIES))
+data_question1
+
+
+data_question1_plot        <- filter(data_question1, LONGITUDE != 0 & LATITUDE !=0)
+data_question1_plot_top  <- data_question1_plot [1:top_param,]
+
+map_quest1<- get_map(location='USA', zoom=4)
+mapPoints_question1       <- ggmap(map_quest1) + geom_point(aes(x=LONGITUDE, 
+                                                y=LATITUDE, 
+                                                size=FATALITIES+INJURIES),
+                                                data=data_question1_plot_top, 
+                                                alpha=0.5)                                            
+
+mapPoints_question1 <- mapPoints_question1 +  scale_size_area(breaks = c(1, 500, 1000, 1500, 2000), 
+                                            labels = c(1, 500, 1000, 1500, 2000), 
+                                            name = "Fatalities and Injuries")
+mapPoints_question1
+
+```
+
+
+
+```{r question2, fig.width=10, fig.height=20}
+
+data_question2  <- arrange(data_df_analysis, desc(PROPDMG + CROPDMG))
+data_question2
+
+data_question2_plot        <- filter(data_question2, LONGITUDE != 0 & LATITUDE !=0)
+data_question2_plot_top  <- data_question2_plot [1:top_param,]
+
+map_quest2<- get_map(location='USA', zoom=4)
+mapPoints_question2       <- ggmap(map_quest2) + geom_point(aes(x=LONGITUDE, 
+                                                y=LATITUDE, 
+                                                size=PROPDMG + CROPDMG),
+                                                data=data_question2_plot_top, 
+                                                alpha=0.5)                                            
+
+mapPoints_question2 <- mapPoints_question2 +  scale_size_area(breaks = c(1000, 2000, 3000, 4000, 5000), 
+                                            labels = c(1000, 2000, 3000, 4000, 5000), 
+                                            name = "Property and crop damage") + facet_grid(EVTYPE~., shrink=FALSE, space="free")
+mapPoints_question2 
+
+
+
+
+
+```
+
+
+
